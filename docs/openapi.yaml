@@ -1,0 +1,1507 @@
+openapi: 3.0.3
+info:
+  title: E-commerce REST API
+  description: |
+    Complete API RESTful for E-commerce platform.
+    
+     ## User Roles
+      ### 👔 MANAGER
+      - Create, update, and delete products
+      - Enable/disable product visibility
+      - Upload and manage product images
+      - View all customer orders
+      - Mark orders as shipped
+      - Manage product inventory
+      
+      ### 👤 CLIENT
+      - Browse and search products (authentication optional)
+      - View detailed product information
+      - Add products to shopping cart
+      - Place orders and make payments
+      - Leave product reviews and ratings
+      - Mark products as favorites
+      - Manage multiple shipping addresses
+    ## Authentication
+      All endpoints require a JWT Bearer token except:
+      - Authentication endpoints (`/auth/*`)
+      - Product browsing (`GET /products`, `GET /products/{id}`)
+      - Category listing (`GET /categories`)
+      - Stripe webhook (`POST /webhooks/stripe`)
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@ecommerce.com
+  
+servers:
+  - url: https://api-dev.ecommerce.com/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "SecurePass123!"
+                role:
+                  type: string
+                  enum: [MANAGER, CLIENT]
+                  example: "CLIENT"
+      responses:
+        '201':
+          description: User created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered.
+
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Successfull login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized user
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/signout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request for password recovery
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Recovery email sended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset email sent"
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - new_password
+              properties:
+                token:
+                  type: string
+                  example: "abc123token456"
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset successfully"
+        '400':
+          $ref: "#/components/responses/BadRequest"
+
+  # ==================== PRODUCTS ====================
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List products with pagination
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: category_id
+          in: query
+          description: Filter by category
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Filter by name or description
+          schema:
+            type: string
+        - name: is_enabled
+          in: query
+          description: Filter by status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Products
+      summary: Create product (MANAGER only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product details (For everyone, authentication not required)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Products
+      summary: Update product details (MANAGER only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Products
+      summary: Update product fields (MANAGER only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_enabled:
+                  type: boolean
+                name:
+                  type: string
+                price:
+                  type: number
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - Products
+      summary: Delete product (MANAGER only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Product deleted successfully.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /products/{id}/images:
+    post:
+      tags:
+        - Products
+      summary: Upload product images (MANAGER only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                is_primary:
+                  type: boolean
+                  description: Mark first image as principal.
+      responses:
+        '201':
+          description: Images uploaded successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductImage'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /products/{id}/images/{imageId}:
+    delete:
+      tags:
+        - Products
+      summary: Delete product image (MANAGER only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Image deleted.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== CATEGORIES ====================
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: List categories
+      security: []
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Categories list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+    post:
+      tags:
+        - Categories
+      summary: Create category (MANAGER only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Electrónica"
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Update category (MANAGER only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Catagory updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== CART ====================
+  /cart:
+    get:
+      tags:
+        - Cart
+      summary: Get user cart
+      responses:
+        '200':
+          description: User cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+
+    post:
+      tags:
+        - Cart
+      summary: Add product to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - product_id
+                - quantity
+              properties:
+                product_id:
+                  type: integer
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Product added to cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /cart/items/{itemId}:
+    put:
+      tags:
+        - Cart
+      summary: Update product quantity in cart
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Quantity updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+
+    delete:
+      tags:
+        - Cart
+      summary: Delete item from cart
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Item deleted.
+
+  # ==================== ORDERS ====================
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: List orders
+      description: |
+        - MANAGER: Can see all the orders.
+        - CLIENT: Only can see its own orders.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, PAID, CANCELLED, SHIPPED]
+        - name: user_id
+          in: query
+          description: MANAGER only - Filter by user
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orders list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Orders
+      summary: Create order from Cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shipping_address_id
+              properties:
+                shipping_address_id:
+                  type: integer
+                  description: Address ID.
+      responses:
+        '201':
+          description: Order created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: "#/components/responses/BadRequest"
+
+  /orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Get order details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Orders
+      summary: Update order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [CANCELLED, SHIPPED, PAID, PENDING]
+      responses:
+        '200':
+          description: Order status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: "#/components/responses/BadRequest"
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== PAYMENTS ====================
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment intent for Stripe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+              properties:
+                order_id:
+                  type: integer
+      responses:
+        '200':
+          description: Payment intent created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  client_secret:
+                    type: string
+                    example: "pi_xxx_secret_yyy"
+                  payment_intent_id:
+                    type: string
+                    example: "pi_1234567890"
+                  amount:
+                    type: number
+                    format: decimal
+        '400':
+          $ref: "#/components/responses/BadRequest"
+
+  /payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment details.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  # ==================== WEBHOOKS ====================
+  /webhooks/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Stripe webhooks
+      security: []
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Stripe event
+      responses:
+        '200':
+          description: Webhook processed successfully.
+        '400':
+          $ref: "#/components/responses/BadRequest"
+
+  # ==================== REVIEWS ====================
+  /products/{id}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Get product reviews
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Reviews list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  average_rating:
+                    type: number
+                    format: float
+                    example: 4.5
+
+    post:
+      tags:
+        - Reviews
+      summary: Create product review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Review created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: "#/components/responses/BadRequest"
+
+  /reviews/{id}:
+    put:
+      tags:
+        - Reviews
+      summary: Update review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Review updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+
+    delete:
+      tags:
+        - Reviews
+      summary: Delete review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Review deleted.
+
+  # ==================== LIKES ====================
+  /products/{id}/like:
+    post:
+      tags:
+        - Likes
+      summary: Mark product as favorite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Like added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Like'
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      tags:
+        - Likes
+      summary: Remove like from a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Like removed.
+
+  /users/me/likes:
+    get:
+      tags:
+        - Likes
+      summary: Get favorite products from the user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Favorite products list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==================== ADDRESSES ====================
+  /addresses:
+    get:
+      tags:
+        - Addresses
+      summary: List user addresses
+      responses:
+        '200':
+          description: Addresses list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+
+    post:
+      tags:
+        - Addresses
+      summary: Create address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '201':
+          description: Address created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+
+  /addresses/{id}:
+    put:
+      tags:
+        - Addresses
+      summary: Update address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '200':
+          description: Address updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+
+    delete:
+      tags:
+        - Addresses
+      summary: Delete address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Address deleted.
+
+  /addresses/{id}/set-default:
+    patch:
+      tags:
+        - Addresses
+      summary: Mark address as 'DEFAULT'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Addrees marked as 'DEFAULT'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained on login
+
+  schemas:
+    # Auth Schemas
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        role:
+          type: string
+          enum: [MANAGER, CLIENT]
+          example: "CLIENT"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+
+    # Product Schemas
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Laptop Dell XPS 15"
+        description:
+          type: string
+          example: "Potente laptop para profesionales"
+        price:
+          type: number
+          format: decimal
+          example: 1299.99
+        is_enabled:
+          type: boolean
+          example: true
+        category:
+          $ref: '#/components/schemas/Category'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+        created_at:
+          type: string
+          format: date-time
+
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            inventory:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  example: 10
+                updated_at:
+                  type: string
+                  format: date-time
+            average_rating:
+              type: number
+              format: float
+              example: 4.5
+            total_reviews:
+              type: integer
+              example: 23
+            total_likes:
+              type: integer
+              example: 150
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - price
+        - category_id
+      properties:
+        name:
+          type: string
+          example: "Laptop Dell XPS 15"
+        description:
+          type: string
+          example: "Potente laptop para profesionales"
+        price:
+          type: number
+          format: decimal
+          example: 1299.99
+        category_id:
+          type: integer
+          example: 1
+        initial_stock:
+          type: integer
+          minimum: 0
+          example: 10
+
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        image_url:
+          type: string
+          format: uri
+          example: "https://cdn.example.com/products/laptop-dell-xps-15.jpg"
+        is_primary:
+          type: boolean
+          example: true
+
+    # Category Schema
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Electrónica"
+        is_active:
+          type: boolean
+          example: true
+
+    # Cart Schemas
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        status:
+          type: string
+          enum: [ACTIVE, ORDERED]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        total:
+          type: number
+          format: decimal
+          example: 2599.98
+        created_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+          example: 2
+        subtotal:
+          type: number
+          format: decimal
+          example: 2599.98
+
+    # Order Schemas
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, PAID, CANCELLED, SHIPPED]
+        total_amount:
+          type: number
+          format: decimal
+          example: 2599.98
+        shipping_address:
+          $ref: '#/components/schemas/Address'
+        created_at:
+          type: string
+          format: date-time
+
+    OrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+                  quantity:
+                    type: integer
+                  price:
+                    type: number
+            shipping_address:
+              $ref: '#/components/schemas/Address'
+            payment:
+              type: object
+              properties:
+                id:
+                  type: integer
+                status:
+                  type: string
+                  enum: [CREATED, SUCCEEDED, FAILED]
+                amount:
+                  type: number
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        phone:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        zip_code:
+          type: string
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    AddressInput:
+      type: object
+      required: [full_name, phone, street, city, country, zip_code]
+      properties:
+        full_name:
+          type: string
+        phone:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        zip_code:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        order_id:
+          type: integer
+        stripe_payment_intent:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [CREATED, SUCCEEDED, FAILED]
+        created_at:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        product_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Like:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        product_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+  responses:  
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Bad Request"
+            message: "The provided data is invalid"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired token"
+
+    Forbidden:
+      description: Forbidden - No permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "You do not have permission to perform this action"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "The requested resource does not exist" 
+
+    Conflict:
+      description: Resource already exists or there is a status conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Conflict"
+            message: "Resource already exists or there is a status conflict"
