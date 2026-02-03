@@ -1,0 +1,10 @@
+input CreateReviewInput {
+    rating: Int!
+    comment: String! 
+    productId : ID!
+}
+
+input UpdateReviewInput {
+    rating: Int
+    comment: String
+}

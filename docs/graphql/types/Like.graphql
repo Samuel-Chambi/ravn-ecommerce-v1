@@ -1,0 +1,6 @@
+type Like { 
+    id: ID!
+    userId: ID!
+    productId: ID!
+    createdAt: DateTime!
+}

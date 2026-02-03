@@ -1,0 +1,21 @@
+enum SortOrder {
+  """Ascending order"""
+  ASC
+  
+  """Descending order"""
+  DESC
+}
+
+"""
+Fields available for sorting products
+"""
+enum ProductSortField {
+  """Sort by product price"""
+  PRICE
+  
+  """Sort by product name"""
+  NAME
+  
+  """Sort by creation date"""
+  CREATED_AT
+}

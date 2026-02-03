@@ -1,0 +1,13 @@
+type User {
+    id: ID!
+    email: String!
+    role: UserRole! 
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+
+type AuthResponse{
+    token: String!
+    user: User!
+}   

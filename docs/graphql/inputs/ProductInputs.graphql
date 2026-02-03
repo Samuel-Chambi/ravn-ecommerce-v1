@@ -1,0 +1,34 @@
+input ProductInput {
+    name: String!
+    description: String!
+    stock: Int!
+    price: Decimal!
+    categoryId: Int
+    images: [ProductImageInput!]
+    isEnable: Boolean = true
+}
+
+
+input ProductImageInput {
+    imageUrl : String!
+    isPrimary: Boolean!
+}
+
+input ProductUpdateInput { 
+    name: String
+    description: String
+    price: Decimal
+    stock: Int
+    categoryId: Int
+    images: [ProductImageInput!]
+    isEnable: Boolean
+}
+
+input ProductFilterInput {
+    categoryId: Int
+    search : String
+    minPrice : Decimal
+    maxPrice : Decimal
+    sortBy : ProductSortField
+    order: SortOrder
+}

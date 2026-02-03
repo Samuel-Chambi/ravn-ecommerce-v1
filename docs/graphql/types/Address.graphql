@@ -1,0 +1,11 @@
+type Address {
+    id: ID!
+    fullName: String!
+    phone: String!
+    street: String!
+    city: String!
+    state: String
+    country: String!
+    zipCode: String!
+    isDefault: Boolean!
+}

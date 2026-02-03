@@ -1,0 +1,9 @@
+input CreateOrderInput {
+    addressId: ID!
+}
+
+input UpdateOrderStatusInput { 
+    orderId: ID!
+    status: OrderStatus!
+}
+
