@@ -592,85 +592,6 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
-    patch: 
-      tags:
-        - Products
-      summary: Update product fields (MANAGER only)
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductInput'
-      responses:
-        '200':
-          description: Product fields updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Product enabled/disabled successfully"
-                  enabled:
-                    type: boolean
-        '400':
-          description: Bad Request - Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalidPrice:
-                  $ref: '#/components/examples/invalidPrice'  
-                invalidQuantity:
-                  $ref: '#/components/examples/invalidQuantity'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalidToken:
-                  $ref: '#/components/examples/invalidToken'
-        '403':
-          description: Forbidden - MANAGER role required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                managerRequired:
-                  $ref: '#/components/examples/managerRequired'
-        '404':
-          description: Product not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                productNotFound:
-                  $ref: '#/components/examples/productNotFound'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                internalError:
-                  $ref: '#/components/examples/internalServerError'
-
-
     delete:
       tags:
         - Products
@@ -722,10 +643,57 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
+  # ============== PRODUCT IMAGES ================
   /products/{productId}/images:
+    get:
+      tags:
+        - Product Images
+      summary: Get product images
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product images list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    type: string
+                    example: "Images returned successfully"
+                  imageUrls:
+                    type: array
+                    items:
+                      type: string
+                      example: "https://storage.example.com/products/img1.jpg"
+        '404':  
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+          
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
     post:
       tags:
-        - Products
+        - Product Images
       summary: Upload product images (MANAGER only)
       parameters:
         - name: productId
@@ -807,12 +775,67 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
+    
+  /products/{productId}/images/{imageId}:
 
+    delete:
+      tags:
+        - Product Images
+      summary: Delete a product image (MANAGER only)
+      responses:
+        '204': 
+          description: Image deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '403':  
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+                imageNotFound:
+                  $ref: '#/components/examples/imageNotFound'
+        '500':  
+          description: Internal Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+  
   # ==================== CART ====================
-  /cart:
+  /cart/{userId}:
     get:
       tags:
         - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       summary: Get current user's cart
       responses:
         '200':
@@ -842,6 +865,13 @@ paths:
     delete:
       tags:
         - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       summary: Clear entire cart
       responses:
         '204':
@@ -865,11 +895,90 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-
-  /cart/items:
+  /cart/{userId}/check-out:
     post:
       tags:
         - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: 
+            type: string
+            format: UUID
+      summary: Create an order from cart
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - addressId
+              properties:
+                addressId:
+                  type: string
+                  format: uuid
+                  description: Shipping address ID
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                cartEmpty:
+                  $ref: '#/components/examples/cartEmpty'
+                insufficientStock:
+                  $ref: '#/components/examples/insufficientStock'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                addressNotFound:
+                  $ref: '#/components/examples/addressNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /cart/{userId}/items:
+    post:
+      tags:
+        - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       summary: Add item to cart
       requestBody:
         required: true
@@ -938,12 +1047,18 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-  /cart/items/{productId}:
+  /cart/{userId}/items/{productId}:
     put:
       tags:
         - Cart
       summary: Update cart item quantity
       parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
         - name: productId
           in: path
           required: true
@@ -1013,6 +1128,12 @@ paths:
         - Cart
       summary: Remove item from cart
       parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
         - name: productId
           in: path
           required: true
@@ -1055,12 +1176,18 @@ paths:
                   $ref: '#/components/examples/internalServerError'
 
   # ==================== ORDERS ====================
-  /orders:
+  /users/{userId}/orders:
     get:
       tags:
         - Orders
-      summary: Get user's orders (or all orders for MANAGER)
+      summary: Get user's orders
       parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
         - name: status
           in: query
           description: Filter by order status
@@ -1125,10 +1252,86 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-    post:
+  /users/{userId}/orders/{orderId}:
+    get:
       tags:
         - Orders
-      summary: Create order from cart
+      summary: Get user order by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: 
+            type: string
+            format: UUID
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - Not authorized to view this order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    patch:
+      tags: 
+        - Orders
+      summary: Update user orders
+      parameters:
+        - name: userId
+          in : path
+          required: true
+          schema: 
+            type: string
+            format: uuid
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -1136,32 +1339,28 @@ paths:
             schema:
               type: object
               required:
-                - addressId
+                - order
               properties:
-                addressId:
-                  type: string
-                  format: uuid
-                  description: Shipping address ID
+                order:
+                  $ref: '#/components/schemas/Order'
       responses:
-        '201':
-          description: Order created successfully
+        '200':
+          description: Order updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Order'
         '400':
-          description: Bad Request
+          description: Bad Request - Invalid change
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                cartEmpty:
-                  $ref: '#/components/examples/cartEmpty'
-                insufficientStock:
-                  $ref: '#/components/examples/insufficientStock'
-                missingField:
-                  $ref: '#/components/examples/missingField'
+                invalidStatusTransition:
+                  $ref: '#/components/examples/invalidStatusTransition'
+                orderCancelError:
+                  $ref: '#/components/examples/orderCancelError'
         '401':
           description: Unauthorized
           content:
@@ -1172,14 +1371,14 @@ paths:
                 invalidToken:
                   $ref: '#/components/examples/invalidToken'
         '404':
-          description: Address not found
+          description: Order not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                addressNotFound:
-                  $ref: '#/components/examples/addressNotFound'
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
         '500':
           description: Internal Server Error
           content:
@@ -1189,12 +1388,93 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
-
+        
+    
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Get all orders (MANAGER only)
+      parameters:
+        - name: status
+          in: query
+          description: Filter by order status
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      totalOrders:
+                        type: integer
+                      limit:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role requied
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+                
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+            
   /orders/{orderId}:
     get:
       tags:
         - Orders
-      summary: Get order by ID
+      summary: Get order by ID (MANAGER only)
       parameters:
         - name: orderId
           in: path
@@ -1227,6 +1507,8 @@ paths:
               examples:
                 resourceAccessDenied:
                   $ref: '#/components/examples/resourceAccessDenied'
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
         '404':
           description: Order not found
           content:
@@ -1325,7 +1607,6 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-
   # ==================== PAYMENTS ====================
   /payments:
     post:
@@ -1404,7 +1685,6 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
-
 
   /payments/{orderId}:
     get:
@@ -1624,90 +1904,101 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-  /reviews/{reviewId}:
+  /products/{productId}/reviews/{reviewId}:
     put:
-      tags:
-        - Reviews
-      summary: Update review
-      parameters:
-        - name: reviewId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
+        tags:
+          - Reviews
+        summary: Update review
+        parameters:
+          - name: productId
+            in: path
+            required: true
             schema:
-              type: object
-              properties:
-                rating:
-                  type: integer
-                  minimum: 1
-                  maximum: 5
-                comment:
-                  type: string
-                  minLength: 10
-      responses:
-        '200':
-          description: Review updated
+              type: string
+              format: uuid
+          - name: reviewId
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        requestBody:
+          required: true
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Review'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalidRating:
-                  $ref: '#/components/examples/invalidRating'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalidToken:
-                  $ref: '#/components/examples/invalidToken'
-        '403':
-          description: Forbidden - Not authorized to update this review
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                resourceAccessDenied:
-                  $ref: '#/components/examples/resourceAccessDenied'
-        '404':
-          description: Review not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                reviewNotFound:
-                  $ref: '#/components/examples/reviewNotFound'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                internalError:
-                  $ref: '#/components/examples/internalServerError'
-
+                type: object
+                properties:
+                  rating:
+                    type: integer
+                    minimum: 1
+                    maximum: 5
+                  comment:
+                    type: string
+                    minLength: 10
+        responses:
+          '200':
+            description: Review updated
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Review'
+          '400':
+            description: Bad Request
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  invalidRating:
+                    $ref: '#/components/examples/invalidRating'
+          '401':
+            description: Unauthorized
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  invalidToken:
+                    $ref: '#/components/examples/invalidToken'
+          '403':
+            description: Forbidden - Not authorized to update this review
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  resourceAccessDenied:
+                    $ref: '#/components/examples/resourceAccessDenied'
+          '404':
+            description: Review not found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  reviewNotFound:
+                    $ref: '#/components/examples/reviewNotFound'
+          '500':
+            description: Internal Server Error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  internalError:
+                    $ref: '#/components/examples/internalServerError'
     delete:
       tags:
         - Reviews
       summary: Delete review
       parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
         - name: reviewId
           in: path
           required: true
@@ -1894,7 +2185,7 @@ paths:
                   $ref: '#/components/examples/internalServerError'
 
   # ==================== ADDRESSES ====================
-  /addresses:
+  /users/{userId}/addresses:
     get:
       tags:
         - Addresses
@@ -1975,7 +2266,7 @@ paths:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
 
-  /addresses/{addressId}:
+  /users/{userId}/addresses/{addressId}:
     put:
       tags:
         - Addresses
@@ -2096,6 +2387,7 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
+
   /webhooks/stripe:
     post:
       tags:
@@ -2183,6 +2475,7 @@ paths:
               examples:
                 insufficientPermissions:
                   $ref: '#/components/examples/insufficientPermissions'
+
 # ==================== COMPONENTS ====================
 components:
   securitySchemes:
@@ -2535,6 +2828,7 @@ components:
             - CART_NOT_FOUND
             - ADDRESS_NOT_FOUND
             - PAYMENT_NOT_FOUND
+            - IMAGE_NOT_FOUND
 
             # CONFLICT ERRORS (409)
             - EMAIL_ALREADY_EXISTS
@@ -2726,7 +3020,12 @@ components:
         error: "Not Found"
         message: "Review with ID value does not exist"
         error_core: "REVIEW_NOT_FOUND"
-
+    imageNotFound:
+      summary: Image not found
+      value:
+        error: "Not Found"
+        message: "Image with ID value does not exist"
+        error_code: "IMAGE_NOT_FOUND"
     # Conflict errors
     emailAlreadyExists:
       summary: Email already exists

@@ -1,0 +1,19 @@
+union SignupResult = AuthResponse | Error
+
+union SigninResult = AuthResponse | Error
+
+union ProductResult = Product | Error
+
+union ProductDetailResult = ProductDeteil | Errpr
+
+union CartResult = Cart | Error
+
+union OrderResult = Order | Error
+
+union AddressResult = Address | Error
+
+union ReviewResult = Review | Error
+
+union PaymentIntentResult = PaymentIntent | Error
+
+union PaymentInfoResult = PaymentInfo | Error

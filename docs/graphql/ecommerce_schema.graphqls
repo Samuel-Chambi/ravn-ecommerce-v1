@@ -1,1 +1,50 @@
- 
+type Query {
+    me: User
+
+    # Products
+} 
+
+type Mutation {
+    signup(input: SignupInput!): SignUpResult!
+    signin(input: SigninInput!): SigninResult!
+    signout: Boolean!
+    forgotPassword(input: ForgotPasswordInput!): Boolean!
+    resetPassword (input: ResetPasswordInput! ): Boolean!
+
+
+    # Products
+    createProduct(input: ProductInput!): ProductResult!
+    updateProduct(id: ID!, input: ProductUpdateInput!): ProductResult!
+    deleteProduct(id: ID!): Boolean!
+    toggleProductStatus(id: ID!): ProductResult!
+    uploadProductImages(productId: ID!, images: [Upload!]!): ProductResult!
+
+    # Cart 
+    addToCart(input: AddToCartInput!): CartResult!
+    updateCartItem(input: updateCartItemInput!): CartResult!
+    removeFromCart(productId: ID!): CartResult!
+    cleanCart : Boolean!
+
+    # Orders
+    createOrder(input: CreateOrderInput!) OrderResult!
+    updateOrderStatus(input: UpdateOrderStatusInput) OrderResult!
+    cancelOrder(id: ID!): Boolean!
+  
+    # Addresses
+    createAddress(input: AddressInput!): AddressResult!
+    updateAddress(id: ID!, input: AddressInput!): AddressResult!
+    deleteAddress(id: ID!): Boolean!
+    
+    # Reviews
+    createReview(input: CreateReviewInput!): ReviewResult!
+    updateReview(id: ID!, input: UpdateReviewInput!): ReviewResult!
+    deleteReview(id: ID!): Boolean!
+    
+    # Favorites
+    likeProduct(productId: ID!): Boolean!
+    unlikeProduct(productId: ID!): Boolean!
+    
+    # Payments
+    createPaymentIntent(input: CreatePaymentIntentInput!): PaymentIntentResult!
+    confirmPayment(input: ConfirmPaymentInput!): PaymentInfoResult!   
+}
