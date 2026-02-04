@@ -1315,6 +1315,80 @@ paths:
               examples:
                 internalError:
                   $ref: '#/components/examples/internalServerError'
+    patch:
+      tags: 
+        - Orders
+      summary: Update user orders
+      parameters:
+        - name: userId
+          in : path
+          required: true
+          schema: 
+            type: string
+            format: uuid
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order
+              properties:
+                order:
+                  $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request - Invalid change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidStatusTransition:
+                  $ref: '#/components/examples/invalidStatusTransition'
+                orderCancelError:
+                  $ref: '#/components/examples/orderCancelError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+        
     
   /orders:
     get:
