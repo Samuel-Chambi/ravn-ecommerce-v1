@@ -1,0 +1,12 @@
+type PaymentInfo{
+    id: ID!
+    status: PaymentStatus!
+    amount: Decimal!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type PaymentIntent{
+    clientSecret: String!
+    paymentIntentId: String!
+}

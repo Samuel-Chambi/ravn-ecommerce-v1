@@ -1,0 +1,25 @@
+type Order {
+    id: ID!
+    userId: ID!
+    items: [OrderItem!]!
+    total: Decimal!
+    status : OrderStatus!
+    shippingAddress: Address!
+    payment: PaymentInfo!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+
+type OrderItem{
+    id: ID!
+    product: OrderProduct!
+    quantity: Int!
+    subTotal: Decimal!
+}
+
+type OrderProduct{
+    id: ID!
+    name: String!
+    imageUrl: String
+}

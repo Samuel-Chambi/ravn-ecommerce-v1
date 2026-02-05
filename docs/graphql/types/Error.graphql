@@ -1,0 +1,5 @@
+type Error {
+    error: String!
+    message: String!
+    errorCode : ErrorCode!
+}

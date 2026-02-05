@@ -1,0 +1,49 @@
+type Product { 
+    id: ID!
+    name: String!
+    description: String! 
+    price: Decimal!
+    stock: Int!
+    categoryId: Int
+    images: [ProductImage!]!
+    isEnabled: Boolean!
+    averageRating: Float
+    totalReviews: Int
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    reviews(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+    ) : ReviewConnection
+    isLikedByMe: Boolean
+}
+
+type ProductImage {
+    id: ID!
+    imageUrl: String!
+    isPrimary: Boolean!
+}
+
+type ProductDetail { 
+    id: ID!
+    name: String!
+    description: String!
+    price: Decimal!
+    stock: Int!
+    categoryId: Int
+    category : category
+    images: [ProductImage!]!
+    isEnabled: Boolean!
+    averageRating: Float
+    totalReviews: Int
+    reviews(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String 
+    ) : ReviewConnection
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}

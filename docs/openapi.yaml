@@ -1,0 +1,3055 @@
+openapi: 3.0.3
+info:
+  title: E-commerce REST API
+  description: |
+    Complete API RESTful for E-commerce platform.
+    
+     ## User Roles
+      ### 👔 MANAGER
+      - Create, update, and delete products
+      - Enable/disable product visibility
+      - Upload and manage product images
+      - View all customer orders
+      - Mark orders as shipped
+      - Manage product inventory
+      
+      ### 👤 CLIENT
+      - Browse and search products (authentication optional)
+      - View detailed product information
+      - Add products to shopping cart
+      - Place orders and make payments
+      - Leave product reviews and ratings
+      - Mark products as favorites
+      - Manage multiple shipping addresses
+
+    
+  version: 1.0.0
+
+security:
+  - BearerAuth: []
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "SecurePass123!"
+                role:
+                  type: string
+                  enum: [MANAGER, CLIENT]
+                  example: "CLIENT"
+      responses:
+        '201':
+          description: User created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad Request - Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingField:
+                  $ref: '#/components/examples/missingField'
+                invalidPassword:
+                  $ref: '#/components/examples/invalidPassword'
+                invalidEmail:
+                  $ref: '#/components/examples/invalidEmail'
+        '409':
+          description: Conflict - Resource already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                emailAlreadyExists:
+                  $ref: '#/components/examples/emailAlreadyExists'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Successfull login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad Request - Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidEmail:
+                  $ref: '#/components/examples/invalidEmail'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCredentials:
+                  $ref: '#/components/examples/invalidCredentials'
+        '404':
+          description: Not found - User not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                userNotFound: 
+                  $ref: '#/components/examples/userNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /auth/signout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request for password recovery
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '204':
+          description: Recovery email sended
+        '400': 
+          description: Bad Request - Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidEmail:
+                  $ref: '#/components/examples/invalidEmail'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - new_password
+              properties:
+                token:
+                  type: string
+                  example: "abc123token456"
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '204':
+          description: Password updated
+
+        '400':
+          description: Bad Request - Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPassword:
+                  $ref: '#/components/examples/invalidPassword'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== PRODUCTS ====================
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Get all products (with optional filters)
+      security: []
+      parameters:
+        - name: category
+          in: query
+          description: Filter by category
+          required: false
+          schema:
+            type: string
+            example: "electronics"
+        - name: minPrice
+          in: query
+          description: Minimum price
+          required: false
+          schema:
+            type: number
+            example: 10.00
+        - name: maxPrice
+          in: query
+          description: Maximum price
+          required: false
+          schema:
+            type: number
+            example: 100.00
+        - name: search
+          in: query
+          description: Search in product name or description
+          required: false
+          schema:
+            type: string
+            example: "laptop"
+        - name: sortBy
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum: [price, name, createdAt]
+            example: "price"
+        - name: order
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            example: "asc"
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Products per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                        example: 1
+                      totalPages:
+                        type: integer
+                        example: 5
+                      totalProducts:
+                        type: integer
+                        example: 47
+                      limit:
+                        type: integer
+                        example: 10
+        '400':
+          description: Bad Request - Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPrice:
+                  $ref: '#/components/examples/invalidPrice'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    post:
+      tags:
+        - Products
+      summary: Create new product (MANAGER only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPrice:
+                  $ref: '#/components/examples/invalidPrice'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+                invalidQuantity:
+                  $ref: '#/components/examples/invalidQuantity'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /products/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      security: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    put:
+      tags:
+        - Products
+      summary: Update product (MANAGER only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPrice:
+                  $ref: '#/components/examples/invalidPrice'  
+                invalidQuantity:
+                  $ref: '#/components/examples/invalidQuantity'        
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    delete:
+      tags:
+        - Products
+      summary: Delete product (MANAGER only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Product deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ============== PRODUCT IMAGES ================
+  /products/{productId}/images:
+    get:
+      tags:
+        - Product Images
+      summary: Get product images
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product images list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    type: string
+                    example: "Images returned successfully"
+                  imageUrls:
+                    type: array
+                    items:
+                      type: string
+                      example: "https://storage.example.com/products/img1.jpg"
+        '404':  
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+          
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    post:
+      tags:
+        - Product Images
+      summary: Upload product images (MANAGER only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Images uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Images uploaded successfully"
+                  imageUrls:
+                    type: array
+                    items:
+                      type: string
+                      example: "https://storage.example.com/products/img1.jpg"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    
+  /products/{productId}/images/{imageId}:
+
+    delete:
+      tags:
+        - Product Images
+      summary: Delete a product image (MANAGER only)
+      responses:
+        '204': 
+          description: Image deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '403':  
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+                imageNotFound:
+                  $ref: '#/components/examples/imageNotFound'
+        '500':  
+          description: Internal Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+  
+  # ==================== CART ====================
+  /cart/{userId}:
+    get:
+      tags:
+        - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      summary: Get current user's cart
+      responses:
+        '200':
+          description: User's cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    delete:
+      tags:
+        - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      summary: Clear entire cart
+      responses:
+        '204':
+          description: Cart cleared successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /cart/{userId}/check-out:
+    post:
+      tags:
+        - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: 
+            type: string
+            format: UUID
+      summary: Create an order from cart
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - addressId
+              properties:
+                addressId:
+                  type: string
+                  format: uuid
+                  description: Shipping address ID
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                cartEmpty:
+                  $ref: '#/components/examples/cartEmpty'
+                insufficientStock:
+                  $ref: '#/components/examples/insufficientStock'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                addressNotFound:
+                  $ref: '#/components/examples/addressNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /cart/{userId}/items:
+    post:
+      tags:
+        - Cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      summary: Add item to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - quantity
+              properties:
+                productId:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 2
+      responses:
+        '200':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidQuantity:
+                  $ref: '#/components/examples/invalidQuantity'
+                productDisabled:
+                  $ref: '#/components/examples/productDisabled'
+                insufficientStock:
+                  $ref: '#/components/examples/insufficientStock'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /cart/{userId}/items/{productId}:
+    put:
+      tags:
+        - Cart
+      summary: Update cart item quantity
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Cart item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidQuantity:
+                  $ref: '#/components/examples/invalidQuantity'
+                insufficientStock:
+                  $ref: '#/components/examples/insufficientStock'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found in cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    delete:
+      tags:
+        - Cart
+      summary: Remove item from cart
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Item removed from cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found in cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== ORDERS ====================
+  /users/{userId}/orders:
+    get:
+      tags:
+        - Orders
+      summary: Get user's orders
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - name: status
+          in: query
+          description: Filter by order status
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      totalOrders:
+                        type: integer
+                      limit:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /users/{userId}/orders/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Get user order by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: 
+            type: string
+            format: UUID
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - Not authorized to view this order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    patch:
+      tags: 
+        - Orders
+      summary: Update user orders
+      parameters:
+        - name: userId
+          in : path
+          required: true
+          schema: 
+            type: string
+            format: uuid
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order
+              properties:
+                order:
+                  $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request - Invalid change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidStatusTransition:
+                  $ref: '#/components/examples/invalidStatusTransition'
+                orderCancelError:
+                  $ref: '#/components/examples/orderCancelError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+        
+    
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Get all orders (MANAGER only)
+      parameters:
+        - name: status
+          in: query
+          description: Filter by order status
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      totalOrders:
+                        type: integer
+                      limit:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role requied
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+                
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+            
+  /orders/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Get order by ID (MANAGER only)
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - Not authorized to view this order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+    patch:
+      tags:
+        - Orders
+      summary: Update order (MANAGER only)
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order
+              properties:
+                order:
+                  $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request - Invalid change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidStatusTransition:
+                  $ref: '#/components/examples/invalidStatusTransition'
+                orderCancelError:
+                  $ref: '#/components/examples/orderCancelError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - MANAGER role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                managerRequired:
+                  $ref: '#/components/examples/managerRequired'
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+                
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== PAYMENTS ====================
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment intent for order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+              properties:
+                orderId:
+                  type: string
+                  format: uuid
+                currency:
+                  type: string
+                  enum: [usd, eur, gbp]
+                  default: usd
+      responses:
+        '200':
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientSecret:
+                    type: string
+                    example: "pi_abc123_secret_xyz789"
+                  paymentIntentId:
+                    type: string
+                    example: "pi_abc123"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                paymentIntentCreationFailed:
+                  $ref: '#/components/examples/paymentIntentCreationFailed'
+                orderAlreadyPaid:
+                  $ref: '#/components/examples/orderAlreadyPaid'
+                invalidCurrency:
+                  $ref: '#/components/examples/invalidCurrency'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orderNotFound:
+                  $ref: '#/components/examples/orderNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /payments/{orderId}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment details for order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                paymentNotFound:
+                  $ref: '#/components/examples/paymentNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== REVIEWS ====================
+  /products/{productId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Get product reviews
+      security: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Product reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  averageRating:
+                    type: number
+                    example: 4.5
+                  totalReviews:
+                    type: integer
+                    example: 127
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      limit:
+                        type: integer
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    post:
+      tags:
+        - Reviews
+      summary: Create product review
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+                - comment
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                comment:
+                  type: string
+                  minLength: 10
+                  example: "Great product! Exceeded my expectations."
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidRating:
+                  $ref: '#/components/examples/invalidRating'
+                emptyComment:
+                  $ref: '#/components/examples/emptyComment'
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '409':
+          description: Review already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                reviewAlreadyExists:
+                  $ref: '#/components/examples/reviewAlreadyExists'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /products/{productId}/reviews/{reviewId}:
+    put:
+        tags:
+          - Reviews
+        summary: Update review
+        parameters:
+          - name: productId
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+          - name: reviewId
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rating:
+                    type: integer
+                    minimum: 1
+                    maximum: 5
+                  comment:
+                    type: string
+                    minLength: 10
+        responses:
+          '200':
+            description: Review updated
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Review'
+          '400':
+            description: Bad Request
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  invalidRating:
+                    $ref: '#/components/examples/invalidRating'
+          '401':
+            description: Unauthorized
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  invalidToken:
+                    $ref: '#/components/examples/invalidToken'
+          '403':
+            description: Forbidden - Not authorized to update this review
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  resourceAccessDenied:
+                    $ref: '#/components/examples/resourceAccessDenied'
+          '404':
+            description: Review not found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  reviewNotFound:
+                    $ref: '#/components/examples/reviewNotFound'
+          '500':
+            description: Internal Server Error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+                examples:
+                  internalError:
+                    $ref: '#/components/examples/internalServerError'
+    delete:
+      tags:
+        - Reviews
+      summary: Delete review
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Review deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden - Not authorized to delete this review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                reviewNotFound:
+                  $ref: '#/components/examples/reviewNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== FAVORITES ====================
+  /favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get user's favorite products
+      responses:
+        '200':
+          description: List of favorite products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  favorites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /favorites/{productId}:
+    post:
+      tags:
+        - Favorites
+      summary: Add product to favorites
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Product added to favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product added to favorites"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '409':
+          description: Product already in favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productAlreadyLiked:
+                  $ref: '#/components/examples/productAlreadyLiked'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    delete:
+      tags:
+        - Favorites
+      summary: Remove product from favorites
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Product removed from favorites
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '404':
+          description: Product not found in favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  $ref: '#/components/examples/productNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  # ==================== ADDRESSES ====================
+  /users/{userId}/addresses:
+    get:
+      tags:
+        - Addresses
+      summary: Get user's addresses
+      responses:
+        '200':
+          description: List of user addresses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Address'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    post:
+      tags:
+        - Addresses
+      summary: Add new address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '201':
+          description: Address created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /users/{userId}/addresses/{addressId}:
+    put:
+      tags:
+        - Addresses
+      summary: Update address
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '200':
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                addressNotFound:
+                  $ref: '#/components/examples/addressNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+    delete:
+      tags:
+        - Addresses
+      summary: Delete address
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Address deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidToken:
+                  $ref: '#/components/examples/invalidToken'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                resourceAccessDenied:
+                  $ref: '#/components/examples/resourceAccessDenied'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                addressNotFound:
+                  $ref: '#/components/examples/addressNotFound'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalError:
+                  $ref: '#/components/examples/internalServerError'
+
+  /webhooks/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Receives webhook events from Stripe to update payment and order status.
+      description: |
+        **Handled Events:**
+        - `payment_intent.succeeded` - Payment completed successfully
+        - `payment_intent.payment_failed` - Payment failed
+        - `payment_intent.canceled` - Payment canceled
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          description: Stripe webhook signature for verification
+          schema:
+            type: string
+          example: "t=1234567890,v1=abc123def456..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, type, data]
+              properties:
+                id:
+                  type: string
+                  example: "evt_1abc2def3ghi"
+                type:
+                  type: string
+                  enum: 
+                    - payment_intent.succeeded
+                    - payment_intent.payment_failed
+                    - payment_intent.canceled
+                  example: "payment_intent.succeeded"
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: object
+                      description: The PaymentIntent object
+                      properties:
+                        id:
+                          type: string
+                          example: "pi_1abc2def3ghi"
+                        amount:
+                          type: number
+                          description: Amount in cents
+                          example: 129999
+                        currency:
+                          type: string
+                          example: "usd"
+                created:
+                  type: integer
+                  description: Unix timestamp when event was created
+                  example: 1234567890
+      responses:
+        '200':
+          description: OK - Webhook processed successfully
+        '400':
+          description: Bad request - Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingField:
+                  $ref: '#/components/examples/missingField'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                tokenExpired:
+                  $ref: '#/components/examples/tokenExpired'
+        '403':  
+          description: Forbidden - No permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                insufficientPermissions:
+                  $ref: '#/components/examples/insufficientPermissions'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [MANAGER, CLIENT]
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Wireless Headphones"
+        description:
+          type: string
+          example: "High-quality wireless headphones with noise cancellation"
+        price:
+          type: number
+          format: float
+          example: 99.99
+        stock:
+          type: integer
+          example: 50
+        category:
+          type: string
+          example: "electronics"
+        images:
+          type: array
+          items:
+            type: string
+            example: "https://example.com/images/headphones.jpg"
+        enabled:
+          type: boolean
+          example: true
+        averageRating:
+          type: number
+          example: 4.5
+        totalReviews:
+          type: integer
+          example: 127
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - description
+        - price
+        - stock
+        - category
+      properties:
+        name:
+          type: string
+          minLength: 3
+          example: "Wireless Headphones"
+        description:
+          type: string
+          minLength: 10
+          example: "High-quality wireless headphones"
+        price:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 99.99
+        stock:
+          type: integer
+          minimum: 0
+          example: 50
+        category:
+          type: string
+          example: "electronics"
+        images:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+          default: true
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                format: uuid
+              product:
+                $ref: '#/components/schemas/Product'
+              quantity:
+                type: integer
+                example: 2
+              subtotal:
+                type: number
+                example: 199.98
+        total:
+          type: number
+          example: 199.98
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                format: uuid
+              product:
+                $ref: '#/components/schemas/Product'
+              quantity:
+                type: integer
+              price:
+                type: number
+              subtotal:
+                type: number
+        total:
+          type: number
+          example: 199.98
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+          example: "PENDING"
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          example: 199.98
+        currency:
+          type: string
+          example: "usd"
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+          example: "COMPLETED"
+        paymentIntentId:
+          type: string
+          example: "pi_abc123"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+          example: "John Doe"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          example: "Excellent product! Highly recommended."
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        street:
+          type: string
+          example: "123 Main St"
+        city:
+          type: string
+          example: "New York"
+        state:
+          type: string
+          example: "NY"
+        zipCode:
+          type: string
+          example: "10001"
+        country:
+          type: string
+          example: "USA"
+        isDefault:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AddressInput:
+      type: object
+      required:
+        - street
+        - city
+        - state
+        - zipCode
+        - country
+      properties:
+        street:
+          type: string
+          example: "123 Main St"
+        city:
+          type: string
+          example: "New York"
+        state:
+          type: string
+          example: "NY"
+        zipCode:
+          type: string
+          example: "10001"
+        country:
+          type: string
+          example: "USA"
+        isDefault:
+          type: boolean
+          default: false
+
+    Error:
+      type: object
+      required: [error, message, error_code]
+      properties:
+        error:
+          type: string
+          description: HTTP error name
+        message:
+          type: string
+          description: Error description
+        error_code:
+          type: string
+          description: Specific error code
+          enum:
+            # BAD REQUEST ERRORS (400)
+            - MISSING_REQUIRED_FIELD
+            - INVALID_EMAIL_FORMAT
+            - INVALID_PASSWORD_FORMAT
+            - INVALID_QUANTITY
+            - INVALID_PRICE
+            - CART_EMPTY
+            - ORDER_ALREADY_PAID
+            - ORDER_CANNOT_BE_CANCELLED
+            - PRODUCT_DISABLED
+            - INSUFFICIENT_STOCK
+            - INVALID_STATUS_TRANSITION
+            - PAYMENT_INTENT_CREATION_FAILED
+            - PAYMENT_ALREADY_PROCESSED
+            - INVALID_CURRENCY_TYPE
+
+            # AUTH ERRORS (401)
+            - INVALID_CREDENTIALS
+            - TOKEN_INVALID
+            - TOKEN_EXPIRED
+            
+            # AUTHORIZATION ERRORS (403)
+            - INSUFFICIENT_PERMISSIONS
+            - MANAGER_ROLE_REQUIRED
+            - RESOURCE_ACCESS_DENIED
+            
+            # NOT FOUND ERRORS (404)
+            - USER_NOT_FOUND
+            - PRODUCT_NOT_FOUND
+            - ORDER_NOT_FOUND
+            - CART_NOT_FOUND
+            - ADDRESS_NOT_FOUND
+            - PAYMENT_NOT_FOUND
+            - IMAGE_NOT_FOUND
+
+            # CONFLICT ERRORS (409)
+            - EMAIL_ALREADY_EXISTS
+            - PRODUCT_ALREADY_LIKED
+            - REVIEW_ALREADY_EXISTS
+
+            # INTERNAL SERVER ERRORS (500)
+            - INTERNAL_SERVER_ERROR
+  
+  examples:
+    # Bad request errors
+    missingField:
+      summary: Missing required fields
+      value:
+        error: "Bad request"
+        message: "Some required field is missing"
+        error_code: 'MISSING_REQUIRED_FIELD'
+    invalidEmail:
+      summary: Invalid email format
+      value:
+        error: "Bad request"
+        message: "Email value has a wrong format"
+        error_code: 'INVALID_EMAIL_FORMAT'
+    invalidPassword:
+      summary: Invalid password format
+      value:
+        error: "Bad Request"
+        message: "Password must be at least 8 characters long and contain letters and numbers"
+        error_code: 'INVALID_PASSWORD_FORMAT'
+    invalidQuantity:
+      summary: Invalid quantity value
+      value:
+        error: "Bad Request"
+        message: "Quantity must be a positive integer greater than zero"
+        error_code: 'INVALID_QUANTITY'
+    invalidPrice:
+      summary: Invalid price value
+      value:
+        error: "Bad Request"
+        message: "Price must be a positive number greater than zero"
+        error_code: 'INVALID_PRICE'
+    cartEmpty:
+      summary: Cart is empty
+      value:
+        error: "Bad Request"
+        message: "Cannot create order from an empty cart"
+        error_code: 'CART_EMPTY'
+    orderAlreadyPaid:
+      summary: Order already paid
+      value:
+        error: "Bad Request"
+        message: "This order has already been paid"
+        error_code: 'ORDER_ALREADY_PAID'
+    orderCancelError:
+      summary: Order cannot be cancelled
+      value:
+        error: "Bad Request"
+        message: "Order cannot be cancelled in its current status"
+        error_code: 'ORDER_CANNOT_BE_CANCELLED'
+    productDisabled:
+      summary: Product is disabled
+      value:
+        error: "Bad Request"
+        message: "This product is currently disabled and cannot be purchased"
+        error_code: 'PRODUCT_DISABLED'
+    insufficientStock:
+      summary: Insufficient stock
+      value:
+        error: "Bad Request"
+        message: "Product does not have enough stock available"
+        error_code: 'INSUFFICIENT_STOCK'
+    invalidStatusTransition:
+      summary: Invalid status transition
+      value:
+        error: "Bad Request"
+        message: "Cannot transition order from current status to requested status"
+        error_code: 'INVALID_STATUS_TRANSITION'
+    invalidCurrency:  
+      summary: Invalid currency type
+      value:
+        error: "Bad Request"
+        message: "Invalid currency type"
+        error_code: 'INVALID_CURRENCY_TYPE'
+    paymentIntentCreationFailed:
+      summary: Payment intent creation failed
+      value:
+        error: "Bad Request"
+        message: "Failed to create payment intent with Stripe"
+        error_code: 'PAYMENT_INTENT_CREATION_FAILED'
+    paymentAlreadyProcessed:
+      summary: Payment already processed
+      value:
+        error: "Bad Request"
+        message: "A payment for this order has already been processed"
+        error_code: 'PAYMENT_ALREADY_PROCESSED'
+    invalidRating: 
+      summary: Rating is invalid
+      value:
+        error: "Bad Request"
+        message: "Rating value is invalid"
+        error_code: "INVALID_RATING"
+    emptyComment:
+      summary: Comment field is empty
+      value:
+        error: "Bad Request"
+        message: "Comment value cannot be empty"
+        error_code: "EMPTY_COMMENT"
+
+    # Unauthorized errors 
+    invalidToken:
+      summary: Invalid token
+      value:
+        error: "Unauthorized"
+        message: "The provided token is invalid"
+        error_code: "TOKEN_INVALID"
+    tokenExpired:
+      summary: Token expired
+      value:
+        error: "Unauthorized"
+        message: "Your session has expired"
+        error_code: "TOKEN_EXPIRED"
+    invalidCredentials:
+      summary: Invalid credentials
+      value:
+        error: "Unauthorized"
+        message: "Email or password is incorrect"
+        error_code: "INVALID_CREDENTIALS"
+
+    # Forbidden errors
+    managerRequired:
+      summary: Manager role required
+      value:
+        error: "Forbidden"
+        message: "This action requires MANAGER role"
+        error_code: "MANAGER_ROLE_REQUIRED"
+    resourceAccessDenied:
+      summary: Access denied to resource
+      value:
+        error: "Forbidden"
+        message: "You don't have permission to access this order"
+        error_code: "RESOURCE_ACCESS_DENIED"
+    insufficientPermissions:
+      summary: Insufficient permissions
+      value:
+        error: "Forbidden"
+        message: "Your session has not permission to get this."
+        error_code: "INSUFFICIENT_PERMISSIONS"
+
+    # Not found errors
+    productNotFound:
+      summary: Product not found
+      value:
+        error: "Not Found"
+        message: "Product with ID value does not exist"
+        error_code: "PRODUCT_NOT_FOUND"
+    userNotFound:
+      summary: User not found
+      value:
+        error: "Not Found"
+        message: "User does not exist"
+        error_code: "USER_NOT_FOUND"
+    orderNotFound:
+      summary: Order not found
+      value:
+        error: "Not Found"
+        message: "Order with ID value does not exist"
+        error_code: "ORDER_NOT_FOUND"
+    addressNotFound:
+      summary: Address not found
+      value:
+        error: "Not Found"
+        message: "Address not found"
+        error_code: "ADDRESS_NOT_FOUND"
+    paymentNotFound:
+      summary: Payment not found
+      value:
+        error: "Not Found"
+        message: "Payment not found"
+        error_code: "PAYMENT_NOT_FOUND"
+    categoryNotFound:
+      summary: Category not found
+      value:
+        error: "Not Found"
+        message: "Category not found"
+        error_code: "CATEGORY_NOT_FOUND"
+    reviewNotFound:
+      summary: Review not found
+      value:
+        error: "Not Found"
+        message: "Review with ID value does not exist"
+        error_core: "REVIEW_NOT_FOUND"
+    imageNotFound:
+      summary: Image not found
+      value:
+        error: "Not Found"
+        message: "Image with ID value does not exist"
+        error_code: "IMAGE_NOT_FOUND"
+    # Conflict errors
+    emailAlreadyExists:
+      summary: Email already exists
+      value:
+        error: "Conflict"
+        message: "Email is already used"
+        error_code: "EMAIL_ALREADY_EXISTS"
+    productAlreadyLiked:
+      summary: Product already marked as favorite
+      value:
+        error: "Conflict"
+        message: "Product already marked as favorite"
+        error_code: "PRODUCT_ALREADY_LIKED"
+    reviewAlreadyExists:
+      summary: A review was already created fot this product
+      value:
+        error: "Conflict"
+        message: "Review already exists"
+        error_code: "REVIEW_ALREADY_EXISTS"
+
+    # Internal Server Error
+    internalServerError:
+      summary: Internal server error
+      value:
+        error: "Internal Server Error"
+        message: "An unexpected error occurred on the server"
+        error_code: "INTERNAL_SERVER_ERROR"

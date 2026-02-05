@@ -1,0 +1,19 @@
+input SignupInput {
+    email: String!
+    password: String!
+    role: UserRole!
+}
+
+input SigninInput {
+    email: String!
+    password: String!
+}
+
+input ForgotPasswordInput {
+    email: String!
+}
+
+input ResetPasswordInput {
+    token: String!
+    newPassword: String!
+}

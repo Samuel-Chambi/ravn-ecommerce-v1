@@ -1,0 +1,13 @@
+type Review {
+    id: ID!
+    user: ReviewUser!
+    comment: String! 
+    rating: Int!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type ReviewUser {
+    id: ID!
+    email: String!
+}
