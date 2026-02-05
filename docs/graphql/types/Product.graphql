@@ -11,6 +11,12 @@ type Product {
     totalReviews: Int
     createdAt: DateTime!
     updatedAt: DateTime!
+    reviews(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+    ) : ReviewConnection
     isLikedByMe: Boolean
 }
 
@@ -32,7 +38,12 @@ type ProductDetail {
     isEnabled: Boolean!
     averageRating: Float
     totalReviews: Int
-    reviews: [Review!]!
+    reviews(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String 
+    ) : ReviewConnection
     createdAt: DateTime!
     updatedAt: DateTime!
 }

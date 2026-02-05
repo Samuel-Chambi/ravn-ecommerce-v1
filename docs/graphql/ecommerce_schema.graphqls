@@ -1,50 +1,310 @@
+"""
+    Queries definitions
+"""
 type Query {
+    """
+        Returns currently authenticated user or null.
+    """
     me: User
+    
+    """ NO-AUTH-REQUIRED QUERIES """
 
-    # Products
+    """
+        List of products with cursor-based pagination
+        No authentication is required
+    """
+    products(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+        filter : ProductFilterInput
+    ) : ProductConnection!
+
+    """
+        Product details searched by ID    
+    """
+    productById(productId : ID!) : ProductDetailResult!
+    
+    """
+        List of products that matches search argmuent with cursor-based pagination
+    """ 
+    searchProducts(
+        query  : String!
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+    ) : ProductConnection!
+    
+    """
+        List of product reviews with cursor-based pagination 
+    """
+
+    productReviews(
+        productId : ID!
+        first     : Int
+        after     : String
+        last      : Int
+        before    : String
+    ) : ReviewConnection
+
+
+    """ AUTH-REQUIRED QUERIES """
+
+    """ 
+        Current authenticated user orders with cursor-based pagination
+    """
+    myOrders(
+        first  : Int
+        after  : String
+        last   : Int 
+        before : String
+        status : OrderStatus
+    ) : OrderConnection!
+
+    """
+        Get a user order by ID
+    """
+    myOrderById(orderId: ID!) : OrderResult!
+
+    """
+        All ecommerce orders (MANAGER role only) with cursor-based pagination
+    """
+    allOrders(
+        first  : Int
+        after  : String
+        last   : Int 
+        before : String
+        status : OrderStatus
+    ) : OrderConnection!
+
+    """
+        Get any order by ID (MANAGER role only)
+    """
+    orderById(orderId : ID!) : OrderResult!
+
+
+    """
+        List of user addresses with cursor-based pagination
+    """
+    addresses(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+
+    ) : AddressConnection!
+    
+    """
+        Get address by ID
+    """
+    addressById(addressId : ID!) : AddressResult!
+
+    """
+        List of authenticated user's favorite products with cursor-based pagination
+    """
+    favorites (
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+    ) : ProductConnection!
+
+    """
+        Check if an specific product is liked by authenticated user.
+    """
+    isProductLiked(productId : ID!) : Boolean!
+
+    """
+        Current authenticated user cart
+    """
+    cart : CartResult!
+
+    """
+        Get payment information for orderId (MANAGER only) 
+    """
+    payment(orderId : ID!) : PaymentInfoResult!
+
+    """
+        List of all payments details with cursor-based pagination 
+    """
+    payments(
+        first  : Int
+        after  : String
+        last   : Int
+        before : String
+    ) : PaymentConnection!
+
 } 
 
 type Mutation {
+    """
+        Register new User
+    """
     signup(input: SignupInput!): SignUpResult!
+    
+    """
+        Login mutation
+    """
     signin(input: SigninInput!): SigninResult!
+
+    """
+        Logout mutation
+    """
     signout: Boolean!
+    
+    """
+        Request for password recovery
+    """
     forgotPassword(input: ForgotPasswordInput!): Boolean!
+
+    """
+        Reset password
+    """    
     resetPassword (input: ResetPasswordInput! ): Boolean!
 
-
+    
     # Products
+    """
+        Create new product (MANAGER only)
+    """
     createProduct(input: ProductInput!): ProductResult!
+    
+    """
+        Update product (MANAGER only)
+    """
     updateProduct(id: ID!, input: ProductUpdateInput!): ProductResult!
+
+    """
+        Delete product (MANAGER only)
+    """
     deleteProduct(id: ID!): Boolean!
-    toggleProductStatus(id: ID!): ProductResult!
+
+    """
+        Disable product (MANAGER only)
+    """
+    disableProduct(id: ID!): Boolean!
+
+    """
+        Upload images for a product (MANAGER only)
+    """
     uploadProductImages(productId: ID!, images: [Upload!]!): ProductResult!
 
+
     # Cart 
+    """
+        Add item to authenticated user cart
+    """
     addToCart(input: AddToCartInput!): CartResult!
-    updateCartItem(input: updateCartItemInput!): CartResult!
+    
+    """
+        Update cart item
+    """
+    updateCartItem(input: UpdateCartItemInput!): CartResult!
+    
+    """
+        Delete cart item
+    """
     removeFromCart(productId: ID!): CartResult!
+
+    """
+        Clean entire cart
+    """
     cleanCart : Boolean!
 
     # Orders
-    createOrder(input: CreateOrderInput!) OrderResult!
-    updateOrderStatus(input: UpdateOrderStatusInput) OrderResult!
+    """
+        Create an order from cart
+    """
+    createOrder(input: CreateOrderInput!): OrderResult!
+
+    """
+        Update order status (MANAGER only)
+    """
+    updateOrderStatus(input: UpdateOrderStatusInput!): OrderResult!
+
+
+    """
+        Cancel a user's order
+    """
     cancelOrder(id: ID!): Boolean!
   
     # Addresses
+    """
+        Add new address 
+    """
     createAddress(input: AddressInput!): AddressResult!
+    
+    """
+        Update address information
+    """
     updateAddress(id: ID!, input: AddressInput!): AddressResult!
+    
+    """
+        Delete address
+    """
     deleteAddress(id: ID!): Boolean!
     
     # Reviews
+    """
+        Create product review
+    """
     createReview(input: CreateReviewInput!): ReviewResult!
+   
+    """
+        Update review
+    """
     updateReview(id: ID!, input: UpdateReviewInput!): ReviewResult!
+    
+    """
+        Delete review
+    """
     deleteReview(id: ID!): Boolean!
     
     # Favorites
+    """
+        Add product to user's favorites
+    """
     likeProduct(productId: ID!): Boolean!
+
+    """
+        Remove product from user's favorites
+    """
     unlikeProduct(productId: ID!): Boolean!
     
     # Payments
+    """
+        Generate payment intent from an order
+    """
     createPaymentIntent(input: CreatePaymentIntentInput!): PaymentIntentResult!
+
+    """
+        Validate payment intent
+    """
     confirmPayment(input: ConfirmPaymentInput!): PaymentInfoResult!   
+}
+
+
+type Subscription { 
+    """
+        Order status changed event
+    """
+    orderStatusChanged(orderId : ID!) : Order!
+    
+    """
+        Product disabled 
+    """
+    productDisabled(productId : ID!) : Product!
+
+    """
+        Product stock reaches low limit event
+    """
+    productLowStock(productId : ID!) : Product!
+}
+
+schema { 
+    query: Query
+    mutation: Mutation
+    subscription : Subscription
 }

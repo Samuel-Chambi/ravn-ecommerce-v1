@@ -1,7 +1,57 @@
-type Pagination {
-    page: Int!
-    limit: Int!
-    total: Int!
-    totalPages : Int!
+type PageInfo {
+    hasNextPage : Boolean!
+    hasPreviousPage: Boolean!
+    startCursor : String
+    endCursor   : String
 }
 
+type ProductConnection {
+    edges : [ProductEdge!]!
+    pageInfo : PageInfo!
+    totalCount : Int!
+}
+
+type ProductEdge {
+    node : Product!
+    cursor : String!
+}
+
+type OrderConnection {
+    edges : [OrderEdge!]!
+    pageInfo : PageInfo!
+    totalCount : Int!
+}
+
+type OrderEdge {
+    node : Order!
+    cursor : String!
+}
+
+type ReviewConnection {
+    edges : [ReviewEdge!]!
+    pageInfo : PageInfo!
+    totalCount : Int!
+    averageRating: Float
+}
+
+type ReviewEdge {
+    node : Review!
+    cursor : String!
+}
+
+type AddressConnection {
+    edges : [AddressEdge!]!
+    pageInfo : PageInfo!
+    totalCount : Int!
+}
+
+type PaymentConnection {
+    edges : [PaymentEdge!]!
+    pageInfo : PageInfo!
+    totalCount : Int!
+}
+
+type PaymentEdge {
+    node : PaymentInfo!
+    cursor : String!
+}

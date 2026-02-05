@@ -4,7 +4,7 @@ union SigninResult = AuthResponse | Error
 
 union ProductResult = Product | Error
 
-union ProductDetailResult = ProductDeteil | Errpr
+union ProductDetailResult = ProductDetail | Error
 
 union CartResult = Cart | Error
 

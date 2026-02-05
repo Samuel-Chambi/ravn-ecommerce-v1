@@ -21,6 +21,5 @@ type OrderItem{
 type OrderProduct{
     id: ID!
     name: String!
-    """Principal image"""
     imageUrl: String
 }
